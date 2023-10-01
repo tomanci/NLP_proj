@@ -1,0 +1,22 @@
+?stmt: expr
+       | NAME "=" expr -> assignment
+
+?expr: term
+       | expr "+" term -> sum
+       | expr "-" term -> sub
+
+?term: factor
+      | term "*" factor -> mul
+      | term "/" factor -> div
+
+?factor: "(" expr ")"
+        | NUMBER
+        | NAME -> var
+        | NAME "(" expr ")" -> function
+        | "-" factor -> neg
+
+%import common.CNAME -> NAME
+%import common.NUMBER
+%import common.WS_INLINE
+
+%ignore WS_INLINE

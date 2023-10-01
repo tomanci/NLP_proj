@@ -1,0 +1,15 @@
+?expr: term
+       | expr "+" term -> sum
+       | expr "-" term -> sub
+
+?term: factor
+      | term "*" factor -> mul
+      | term "/" factor -> div
+
+?factor: "(" expr ")"
+        | NUMBER
+        | "-" factor -> neg
+%import common.NUMBER
+%import common.WS_INLINE
+
+%ignore WS_INLINE

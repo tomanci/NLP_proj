@@ -1,0 +1,17 @@
+// value is not reported (it always has one child)
+?value: dict
+     | list
+     | STRING
+     | NUMBER
+     | "true" -> true       // literal strings are assigned a name to be reported
+     | "false" -> false
+     | "null" -> null
+
+list : "[" [value ("," value)*] "]"
+dict : "{" [pair ("," pair)*] "}"
+pair : STRING ":" value
+
+%import common.ESCAPED_STRING   -> STRING
+%import common.SIGNED_NUMBER    -> NUMBER
+%import common.WS
+%ignore WS
