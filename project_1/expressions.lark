@@ -1,0 +1,18 @@
+?stmt: expr 
+      | NAME "=" expr -> assignment 
+
+?expr: term
+       | expr "+" term -> sum
+
+?term: factor
+      | term "*" factor -> mul
+
+?factor: "(" expr ")"
+        | NUMBER
+        | NAME "(" expr ")" -> expr 
+
+%import common.NUMBER
+%import common.WS_INLINE
+%import common.CNAME -> NAME
+
+%ignore WS_INLINE
