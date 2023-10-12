@@ -1,18 +1,44 @@
-?stmt: expr 
-      | NAME "=" expr -> assignment 
+?stmt: CNAME name_function "(" parmater* ")" "{"  body  "}" -> func 
 
-?expr: term
-       | expr "+" term -> sum
+?body: "return" operation ";"
 
-?term: factor
-      | term "*" factor -> mul
+?operation : 
 
-?factor: "(" expr ")"
-        | NUMBER
-        | NAME "(" expr ")" -> expr 
+?name_function: CNAME
+?parmater: type_var name_var
 
+\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+?parmaters : NUMBER
 %import common.NUMBER
 %import common.WS_INLINE
-%import common.CNAME -> NAME
+%import common.CNAME
+
+%ignore WS_INLINE
+
+?param: type_var name_var
+?body: "return" operation ";"
+
+? operation: expr "+" term -> sum
+    | term "*" factor -> prod
+
+expr : NUMBER
+
+term: expr | expr + term;
+
+
+?value: NUMBER 
+    | "'" LETTER "'"
+
+?func_name : CNAME
+
+
+
+STRING: (LETTER|DIGIT)+
+%import common.CNAME
+%import common.LETTER
+%import common.DIGIT
+%import common.NUMBER
+%import common.WS_INLINE
 
 %ignore WS_INLINE
