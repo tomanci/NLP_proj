@@ -1,0 +1,24 @@
+?stmt: CNAME  struct_type  "{" (declaration)* "}" s_var ";" -> struct_init
+    | s_var "." var "=" value -> assignment
+    | (s_var "." var) -> variable
+    | s_var -> output
+
+?declaration : type_var var ";" -> declaration 
+
+?value: NUMBER 
+    | "'" LETTER "'"
+
+?struct_type : CNAME
+?var: CNAME 
+?s_var : CNAME 
+?type_var: STRING
+
+
+STRING: (LETTER|DIGIT)+
+%import common.CNAME
+%import common.LETTER
+%import common.DIGIT
+%import common.NUMBER
+%import common.WS_INLINE
+
+%ignore WS_INLINE
