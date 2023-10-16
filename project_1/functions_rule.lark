@@ -1,0 +1,17 @@
+?function_name: function_definition "(" parameter+ ")" "{" body "}"
+
+?function_definition : CNAME
+
+?body: "return" operation ";"
+
+?parameter: type_var name_var ("," type_var name_var)*
+
+?operation: name_var ("+" name_var)*
+
+?type_var: CNAME
+?name_var: CNAME
+
+%import common.CNAME
+%import common.WS_INLINE
+
+%ignore WS_INLINE
