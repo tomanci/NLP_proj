@@ -10,7 +10,8 @@ class EvalExpr(lark.Transformer):
         return args[0]*args[1]
     
     
-source = "sum(int x,int y){return x + y;}"
+source = """sum(int x, int y)
+            {return x * y;}"""
 
 print(">> Input string: ",source)
 

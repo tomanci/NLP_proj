@@ -6,12 +6,21 @@
 
 ?parameter: type_var name_var ("," type_var name_var)*
 
-?operation: name_var ("+" name_var)*
+?operation: name_var (operand name_var)*
+
+?operand: 
+        |plus
+        |prod
+
+?prod: "*"
+?plus: "+"
 
 ?type_var: CNAME
 ?name_var: CNAME
 
 %import common.CNAME
 %import common.WS_INLINE
+%import common.WS
 
 %ignore WS_INLINE
+%ignore WS
