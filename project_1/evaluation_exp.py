@@ -1,6 +1,9 @@
 import lark
 
-class EvalExpr(lark.Transformer):
+class FuncionDefinition(lark.Transformer):
+    def __init__(self):
+        return
+
     NUMBER = float
 
     def sum(self,args):
@@ -10,12 +13,13 @@ class EvalExpr(lark.Transformer):
         return args[0]*args[1]
     
     
-source = """sum(int x, int y)
-            {return x * y;}"""
+source = """fun_name(x,y,z)
+            {return x + y * z;}"""
 
 print(">> Input string: ",source)
 
-json_parser = lark.Lark.open("functions_rule.lark",rel_to=__file__,start="function_name",parser='lalr')
+json_parser = lark.Lark.open("functions_rule.lark", rel_to = __file__, start = "function_name",
+                             parser = 'lalr')#, transformer = FuncionDefinition())
 result = json_parser.parse(source)
 print("\n*** Parse tree pretty print\n", result.pretty())
 

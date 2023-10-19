@@ -4,23 +4,28 @@
 
 ?body: "return" operation ";"
 
-?parameter: type_var name_var ("," type_var name_var)*
+?parameter: name_var ("," name_var)+
 
-?operation: name_var (operand name_var)*
+?operation: sum_expr
+
+?sum_expr: prod_expr
+        | sum_expr "+" prod_expr
+
+?prod_expr: atom_expr
+        | prod_expr "*" atom_expr
+
+?atom_expr: CNAME
 
 ?operand: 
-        |plus
-        |prod
-
-?prod: "*"
-?plus: "+"
-
-?type_var: CNAME
+        |"+"
+        |"*"
+ 
 ?name_var: CNAME
 
 %import common.CNAME
 %import common.WS_INLINE
 %import common.WS
+%import common.NUMBER
 
 %ignore WS_INLINE
 %ignore WS
