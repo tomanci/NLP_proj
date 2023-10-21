@@ -1,25 +1,19 @@
 ?function_name: function_definition "(" parameter+ ")" "{" body "}"
 
-?function_definition : CNAME
-
 ?body: "return" operation ";"
 
-?parameter: name_var ("," name_var)+
+?parameter: name_var ("," name_var)+ -> fun_definition
 
 ?operation: sum_expr
 
 ?sum_expr: prod_expr
-        | sum_expr "+" prod_expr
+        | sum_expr "+" prod_expr -> fun_definition
 
 ?prod_expr: atom_expr
-        | prod_expr "*" atom_expr
+        | prod_expr "*" atom_expr -> fun_definition
 
-?atom_expr: CNAME
-
-?operand: 
-        |"+"
-        |"*"
- 
+?function_definition : CNAME
+?atom_expr: CNAME  
 ?name_var: CNAME
 
 %import common.CNAME
