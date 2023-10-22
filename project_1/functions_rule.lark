@@ -1,4 +1,5 @@
 ?function_name: function_definition "(" parameter+ ")" "{" body "}"
+                | function_definition "(" parameter+ ")"
 
 ?body: "return" operation ";"
 
@@ -7,10 +8,10 @@
 ?operation: sum_expr
 
 ?sum_expr: prod_expr
-        | sum_expr "+" prod_expr -> fun_definition
+        | sum_expr "+" prod_expr -> oper_definition //fun_definition
 
 ?prod_expr: atom_expr
-        | prod_expr "*" atom_expr -> fun_definition
+        | prod_expr "*" atom_expr -> oper_definition //fun_definition
 
 ?function_definition : CNAME
 ?atom_expr: CNAME  
