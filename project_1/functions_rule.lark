@@ -8,10 +8,10 @@
 ?operation: sum_expr
 
 ?sum_expr: prod_expr
-        | sum_expr "+" prod_expr -> oper_definition //fun_definition
+        | sum_expr "+" prod_expr -> sum//oper_definition //fun_definition
 
 ?prod_expr: atom_expr
-        | prod_expr "*" atom_expr -> oper_definition //fun_definition
+        | prod_expr "*" atom_expr -> mul//oper_definition //fun_definition
 
 ?function_definition : CNAME
 ?atom_expr: CNAME  

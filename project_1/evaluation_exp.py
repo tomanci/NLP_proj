@@ -29,16 +29,17 @@ class FuncionDefinition(lark.Transformer):
         if len(self.param_list[0]) != len(self.oper_list[0]):
             raise ValueError ("the number of parameters does not correspond!!!")
 
-    def sum(self,*args):
-        print(args)
-        return args[0]
+    def sum(self,args):
+        self.oper_list = ["+",args]
+        return self.oper_list#("+", args[0] + args[1])
     
     def mul(self,args):
-        return args[0] * args[1]
+        self.oper_list = ["*",args]
+        return self.oper_list#("*",args[0] * args[1])
     
     
-source = """f_n(x,y)
-            {return x_1 + y_1*z;}"""
+source = """f_n(a,b)
+            {return x * y + z*w;}"""
 
 #source = "f_n(x,y)"
 print(">> Input string: ",source)
@@ -61,3 +62,28 @@ if __name__ == '__main__':
     main()
 
 """
+def lazy_evaluate(operation, operand1, operand2):
+    if operation == "*":
+        return str(operand1 + "*" + operand2)
+    else:
+        return str(operand1 + "+" + operand2)
+
+def evaluation(expression):
+
+    operation = expression[0]
+    operand1 = expression[1]
+    operand2 = expression[2]
+
+    if isinstance(operand1,list):
+        operand1 = evaluation(operand1)
+
+    if isinstance(operand2,list):
+        operand2 = evaluation(operand2)
+
+    return lazy_evaluate(operation, operand1, operand2)
+
+nested_list = ["+",["*","x","y"],["*","z","w"]]
+#nested_list = ["+", "x",["*","z","w"]]
+
+result = evaluation(nested_list)
+print(result)
