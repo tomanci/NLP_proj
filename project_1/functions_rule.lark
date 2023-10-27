@@ -1,19 +1,21 @@
-?function_name: function_definition "(" parameter+ ")" "{" body "}"
-                | function_definition "(" parameter+ ")"
+?function_name: function_definition "(" parameter_d+ ")" "{" body "}" -> fun_initialization_def
+               |function_definition "(" parameter_c+ ")" -> fun_initialization_call
 
 ?body: "return" operation ";"
 
-?parameter: name_var ("," name_var)+ -> fun_definition
+?parameter_d: name_var ("," name_var)+ -> fun_definition
+?parameter_c: NUMBER ("," NUMBER)+  -> fun_call
 
 ?operation: sum_expr
 
 ?sum_expr: prod_expr
-        | sum_expr "+" prod_expr -> sum//oper_definition //fun_definition
+        | sum_expr "+" prod_expr -> sum
 
 ?prod_expr: atom_expr
-        | prod_expr "*" atom_expr -> mul//oper_definition //fun_definition
+        | prod_expr "*" atom_expr -> mul
 
 ?function_definition : CNAME
+
 ?atom_expr: CNAME  
 ?name_var: CNAME
 
