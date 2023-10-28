@@ -14,19 +14,15 @@ class FuncionDefinition(lark.Transformer):
         self.param_list = values[1]
         self.oper_list = values[2]
         self._check_name(self.oper_list,self.param_list)
-        print(self.oper_list)
         
     def fun_initialization_call(self,values):
         self.call_fun_name = values[0]
         self.parm_call_list = values[1]
         self._check_number_parameters(self.parm_call_list, self.param_list, self.oper_list)
         self._check_name_function(self.def_fun_name, self.call_fun_name)
-        self.evaluation(self.oper_list, self.param_list ,self.parm_call_list)
-        #operation = values[1][0]
-        operand1 = values[1][0][0]
-        operand2 = values[1][0][1]
-        print(int(operand1)+int(operand2))
-        return operand1+operand2
+        result = self.evaluation(self.oper_list, self.param_list ,self.parm_call_list)
+        print(f"The result of the call to the function is {result}")
+        return result
 
     def fun_definition(self,parameter):
         self.param_list = [parameter]
@@ -76,15 +72,20 @@ class FuncionDefinition(lark.Transformer):
             operands = expression[1:]
 
         if isinstance(operands, list):
-            operands = [evaluation(operand, param_list ,parm_call_list) 
+            operands = [self.evaluation(operand, param_list ,parm_call_list) 
                         if isinstance(operand, list) else operand for operand in operands]
 
         return self.lazy_evaluate(operation, operands, self.param_list ,self.parm_call_list)
 
     def lazy_evaluate(self, operation, operands, param_list ,parm_call_list):
 
-        operand1 = self._check_correspondence(operands[0], param_list, parm_call_list)
-        operand2 = self._check_correspondence(operands[1], param_list, parm_call_list)
+        operand1 = operands[0]
+        operand2 = operands[1]
+
+        if not isinstance(operands[0],float):
+            operand1 = self._check_correspondence(operands[0], param_list, parm_call_list)
+        if not isinstance(operands[1],float):
+            operand2 = self._check_correspondence(operands[1], param_list, parm_call_list)
 
         if operation == "*":
             return operand1 * operand2
@@ -93,12 +94,17 @@ class FuncionDefinition(lark.Transformer):
     
     def _check_correspondence(self, operand, param_list, param_call_list):
         counter = 0
-        for item in param_list:
-            counter = counter + 1 
+        for item in param_list[0]: 
+
             if item == operand:
-                return param_call_list[counter]
+                return float(param_call_list[0][counter])
+            
+            counter = counter + 1 
                 
     def _check_name(self, oper_list, param_list):
+
+        oper_list = self.flat(oper_list)
+        param_list = self.flat(param_list)
 
         for item in param_list:
             bol = False
@@ -110,50 +116,16 @@ class FuncionDefinition(lark.Transformer):
                 break                  
             
     
-def_function = """f_n(x,y)
-            {return x + y;}"""
-            
-call_function = """f_n(1,3)"""
 
-#source = "f_n(x,y)"
-#print(">> Input string: ",def_function)
+def_function = input("State your function, creating the expression: \n")   
+call_function = input("Call you function, by defining also the value of your paramaters:\n")
+
+#def_function = """f_n(x,y,z,w,t)
+#            {return x * y+z*w+t;}"""       
+#call_function = """f_n(1,2,3,4,1)"""
 
 function_parser = lark.Lark.open("functions_rule.lark", rel_to = __file__, start = "function_name",
                              parser = 'lalr', transformer = FuncionDefinition())
 
 result_function = function_parser.parse(def_function)
 result_function_call = function_parser.parse(call_function)
-
-#print("\n*** Parse tree pretty print\n", result_function.pretty())
-#print("\n*** Parse tree pretty print\n", result_function_call.pretty())
-
-
-def lazy_evaluate(operation, operands):
-    operand1 = operands[0]
-    operand2 = operands[1]
-
-    if operation == "*":
-        return str(operand1 + "*" + operand2)
-    else:
-        return str(operand1 + "+" + operand2)
-
-def evaluation(expression):
-    operation = expression[0]
-    
-    if len(expression[1:]) == 1:
-        operands = expression[1]
-    else:
-        operands = expression[1:]
-
-    if isinstance(operands, list):
-        operands = [evaluation(operand) if isinstance(operand, list) else operand for operand in operands]
-
-    return lazy_evaluate(operation, operands)
-
-            
-nested_list = [ "+",["*", ["x","y"] ],[ "*", ["z","w"] ] ] #ok
-#nested_list = ["+", ["x",["*",["z","w"]]]] #ok
-#nested_list = ["+",["x","y"]] #ok
-#nested_list = ["+",["x",["*",["y","z"]]]] #ok
-result = evaluation(nested_list)
-print(result)
