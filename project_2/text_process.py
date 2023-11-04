@@ -39,8 +39,8 @@ class Language ():
 
       self.path_name = path_name
 
-      self.word2index = {"EOS":0}
-      self.index2word = {0:"EOS"}
+      self.word2index = {"EOS":0, "SOS":1}
+      self.index2word = {0:"EOS", 1:"SOS"}
       self.n_words = 1 
       self.n_sentences = 0 
       self.n_max_length = 0 
@@ -48,7 +48,9 @@ class Language ():
    def normalize_string (self, s) -> str:
       s = re.sub(r"([.!? \, \' \" \% \-])", r" ", s) #remove puntuation 
       s = s.lower() #convert to lower 
-      return s.strip() # remove spaces from the beginning / end    
+      s = s.strip() # remove spaces from the beginning / end 
+      s = "SOS" + " " + s + " "+ "EOS"
+      return s    
 
    def add_string(self, s):
       partial_length = 0 
@@ -69,7 +71,7 @@ class Language ():
          self.n_words = self.n_words + 1
 
    def string_processing (self):
-      processed_file = open("processed"+self.path_name, "w") #da cambiare e sovrascrivere file vecchio
+      processed_file = open("processed-"+self.path_name, "w") 
 
       with open(str(self.path_name)) as file:
          for s in file:
@@ -90,15 +92,14 @@ def Dataset_creation(lang_input, lang_output):
    if lang_input.n_sentences != lang_output.n_sentences:
       raise KeyError ("Error, the number of examples does not match")
 
-   matrix_input  = np.zeros( (lang_input.n_sentences, MAX_LENGTH) )
-   matrix_output = np.zeros( (lang_output.n_sentences, MAX_LENGTH) )
-
    #TODO #1:
-   matrix_input = Matrix_creation(matrix_input, lang_input)
-   matrix_output = Matrix_creation(matrix_output, lang_output)
+   matrix_input = Matrix_creation(lang_input, MAX_LENGTH)
+   matrix_output = Matrix_creation(lang_output, MAX_LENGTH)
    
    
-def Matrix_creation(matrix, lang):
+def Matrix_creation(lang, MAX_LENGTH):
+   matrix  = np.zeros( (lang.n_sentences, MAX_LENGTH) )
+
 
    path_input = "processed"+lang.path_name
 
@@ -129,14 +130,8 @@ def main ():
    input_lang.string_processing()
    output_lang.string_processing()
 
-   print(input_lang.n_sentences)
-   print(input_lang.n_max_length)
-   print(output_lang.n_max_length)
-
-   Dataset_creation(input_lang, output_lang)
+   #Dataset_creation(input_lang, output_lang)
 
    
-
-
 if __name__ == "__main__":
    main()
