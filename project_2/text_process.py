@@ -49,7 +49,8 @@ class Language ():
       s = re.sub(r"([.!? \, \' \" \% \-])", r" ", s) #remove puntuation 
       s = s.lower() #convert to lower 
       s = s.strip() # remove spaces from the beginning / end 
-      s = "SOS" + " " + s + " "+ "EOS"
+      #s = "SOS" + " " + s + " "+ "EOS"
+      s = s + " " "EOS"
       return s    
 
    def add_string(self, s):
@@ -85,7 +86,7 @@ class Language ():
    #TODO #2:
 
 
-def Dataset_creation(lang_input, lang_output):
+def Dataset_creation(lang_input, lang_output, training_val_test_ratio:tuple = (0.85,0.05,0.1)):
    
    MAX_LENGTH = max(lang_input.n_max_length, lang_output.n_max_length) + 1 # I've -> I ve so I have two words now 
 
@@ -95,13 +96,15 @@ def Dataset_creation(lang_input, lang_output):
    #TODO #1:
    matrix_input = Matrix_creation(lang_input, MAX_LENGTH)
    matrix_output = Matrix_creation(lang_output, MAX_LENGTH)
+
+   split_train_test(matrix_input, matrix_output, training_val_test_ratio)
    
    
 def Matrix_creation(lang, MAX_LENGTH):
    matrix  = np.zeros( (lang.n_sentences, MAX_LENGTH) )
 
 
-   path_input = "processed"+lang.path_name
+   path_input = "processed-"+lang.path_name
 
    try:
 
@@ -130,8 +133,48 @@ def main ():
    input_lang.string_processing()
    output_lang.string_processing()
 
-   #Dataset_creation(input_lang, output_lang)
+   #Dataset_creation(input_lang, output_lang,training_val_test_ratio:tuple = (0.85,0.05,0.1))
 
+
+def split_train_test(matrix_input, matrix_target, training_val_test_ratio:tuple = (0.85,0.05,0.1)):
+    
+    dim = matrix_input.shape
+    n_rows = dim[0]
+
+    input_train = []
+    output_train = []
+    input_val = []
+    output_val =[]
+    input_test = []
+    output_test = []
+
+    shuffled_list = torch.randperm(n_rows)
+
+    n_example_training = int(n_rows/training_val_test_ratio[0])
+    n_example_val = int ( n_rows /training_val_test_ratio[1] )
+    n_example_test = n_rows - (n_example_training + n_example_val)
+
+    for i in range(n_example_training):
+        item = shuffled_list[i]
+        input_train.append( matrix_input[item] )
+        output_train.append( matrix_target[item] )
+    
+    for i in range(n_example_training,n_example_val):
+        item = shuffled_list[i]
+        input_val.append( matrix_input[item] )
+        output_val.append( matrix_target[item] )
+
+    for i in range(n_example_val,n_rows):
+        item = shuffled_list[i]
+        input_test.append( matrix_input[item] )
+        output_test.append( matrix_target[item] )
+
+    np.save(str(input_train)+'.npy', input_train)
+    np.save(str(input_val)+'.npy', input_val)
+    np.save(str(input_test)+'.npy', input_test)
+    np.save(str(output_train)+'.npy', output_train)
+    np.save(str(output_val)+'.npy', output_val)
+    np.save(str(output_test)+'.npy', output_test)
    
 if __name__ == "__main__":
    main()
