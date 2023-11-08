@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
 import numpy as np
+from tqdm import tqdm
 
 SOS = 1
 class EncoderRNN(nn.Module):
@@ -72,9 +73,8 @@ def train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train:torch
     """
     training funtion on a single epoch of the input matrix dataset
     """
-    
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
-    decoder_oprimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
+    decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
 
     n_batch = input_train.shape[0] // n_elem_batch #quotient
     elem_last_batch = input_train.shape[0] % n_elem_batch #resto
@@ -83,7 +83,7 @@ def train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train:torch
     for i in range(n_batch):
         
         encoder_optimizer.zero_grad()
-        decoder_oprimizer.zero_grad()
+        decoder_optimizer.zero_grad()
         
         input_tensor = input_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].shape(1,-1)
         #in base alla funzione, al fatto che l'encoder prende in input un vettore e non una matrice ( tensor Dataset)
@@ -100,31 +100,65 @@ def train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train:torch
         total_loss_batch += loss.item()
 
         encoder_optimizer.step()
-        decoder_oprimizer.step()
+        decoder_optimizer.step()
 
-        #last elements of the training set
-        encoder_optimizer.zero_grad()
-        decoder_oprimizer.zero_grad()
+    #last elements of the training set
+    encoder_optimizer.zero_grad()
+    decoder_optimizer.zero_grad()
 
-        input_tensor = input_train[(i+1)*n_elem_batch:, : ].shape(1,-1)
-        #in base alla funzione, al fatto che l'encoder prende in input un vettore e non una matrice ( tensor Dataset)
-        output_tensor = output_train[(i+1)*n_elem_batch:, : ].shape(1,-1)
+    input_tensor = input_train[(i+1)*n_elem_batch:, : ].shape(1,-1)
+    #in base alla funzione, al fatto che l'encoder prende in input un vettore e non una matrice ( tensor Dataset)
+    output_tensor = output_train[(i+1)*n_elem_batch:, : ].shape(1,-1)
 
 
-        encoder_outputs, encoder_hidden = encoder(input_tensor)
-        decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)
+    encoder_outputs, encoder_hidden = encoder(input_tensor)
+    decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)
 
-        loss = loss_function(
-            decoder_outputs.view(-1, decoder_outputs.size(-1)),
-            output_tensor.view(-1))
+    loss = loss_function(
+        decoder_outputs.view(-1, decoder_outputs.size(-1)),
+        output_tensor.view(-1))
         
-        loss.backward()
-        total_loss_batch += loss.item()
+    loss.backward()
+    total_loss_batch += loss.item()
 
-        encoder_optimizer.step()
-        decoder_oprimizer.step()
+    encoder_optimizer.step()
+    decoder_optimizer.step()
+
+    return total_loss_batch/input_train.shape[0]
 
 
+def train(encoder, decoder, n_elem_batch, learning_rate, input_train:torch.tensor, output_train:torch.tensor, n_epochs, 
+          input_val:torch.tensor, output_val:torch.tensor):
+
+    loss_function = nn.NLLLoss()
+    total_losses_plot = []
+    # Da aggiungere i plot se ci interessano =)
+
+    for steps in tqdm( list (range(n_epochs)) ):
+
+        error = train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train, output_train, loss_function)
+        total_losses_plot.append(error)
+
+        error_val = validation(encoder, decoder,input_val, output_val, loss_function)
+
+
+def validation (encoder, decoder,input_val, output_val, loss_function):
+
+    input_tensor = input_val.shape(1,-1)
+    output_tensor = output_val.shape(1,-1)
+    validation_loss = 0 
+
+    with torch.no_grad():
+        
+        encoder_outputs, encoder_hidden = encoder(input_tensor)
+        decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)   
+        
+        loss = loss_function(
+        decoder_outputs.view(-1, decoder_outputs.size(-1)),
+        output_tensor.view(-1))
+
+        return loss / decoder_outputs.shape[0]
+     
 
 # DA FARE VALIDATION, TESTING FUNCTION E TRAINING FUNCTION CHE CONSIDERA LE EPOCHE 
 
