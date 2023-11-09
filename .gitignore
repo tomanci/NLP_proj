@@ -2,3 +2,4 @@ venv/
 examples/TopDownRecursive/__pycache__
 *.txt
 *.npy
+.DS_Store
