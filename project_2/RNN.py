@@ -85,9 +85,9 @@ def train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train:torch
         encoder_optimizer.zero_grad()
         decoder_optimizer.zero_grad()
         
-        input_tensor = input_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].view(1,-1)
+        input_tensor = input_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].view(1,-1).to(torch.int64)
         #in base alla funzione, al fatto che l'encoder prende in input un vettore e non una matrice ( tensor Dataset)
-        output_tensor = output_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].view(1,-1)
+        output_tensor = output_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].view(1,-1).to(torch.int64)
         
         encoder_outputs, encoder_hidden = encoder(input_tensor)
         decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)
