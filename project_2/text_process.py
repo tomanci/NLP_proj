@@ -41,7 +41,7 @@ class Language ():
 
       self.word2index = {"EOS":0, "SOS":1}
       self.index2word = {0:"EOS", 1:"SOS"}
-      self.n_words = 1 
+      self.n_words = 2 
       self.n_sentences = 0 
       self.n_max_length = 0 
 
@@ -133,48 +133,52 @@ def main ():
    input_lang.string_processing()
    output_lang.string_processing()
 
-   #Dataset_creation(input_lang, output_lang,training_val_test_ratio:tuple = (0.85,0.05,0.1))
+   Dataset_creation(input_lang, output_lang,training_val_test_ratio= (0.85,0.05,0.1))
 
 
 def split_train_test(matrix_input, matrix_target, training_val_test_ratio:tuple = (0.85,0.05,0.1)):
     
-    dim = matrix_input.shape
-    n_rows = dim[0]
+   dim = matrix_input.shape
+   n_rows = dim[0]
 
-    input_train = []
-    output_train = []
-    input_val = []
-    output_val =[]
-    input_test = []
-    output_test = []
+   input_train = []
+   output_train = []
+   input_val = []
+   output_val =[]
+   input_test = []
+   output_test = []
 
-    shuffled_list = torch.randperm(n_rows)
+   shuffled_list = rd.sample(range(n_rows), n_rows)  # The range of integers from 0 to n-1
 
-    n_example_training = int(n_rows/training_val_test_ratio[0])
-    n_example_val = int ( n_rows /training_val_test_ratio[1] )
-    n_example_test = n_rows - (n_example_training + n_example_val)
+   n_example_training = int(n_rows * training_val_test_ratio[0])
+   n_example_val = int ( n_rows * training_val_test_ratio[1] )
+   n_example_test = n_rows - (n_example_training + n_example_val)
 
-    for i in range(n_example_training):
-        item = shuffled_list[i]
-        input_train.append( matrix_input[item] )
-        output_train.append( matrix_target[item] )
+   for i in range(n_example_training):
+      item = shuffled_list[i]
+      input_train.append( matrix_input[item] )
+      output_train.append( matrix_target[item] )
     
-    for i in range(n_example_training,n_example_val):
-        item = shuffled_list[i]
-        input_val.append( matrix_input[item] )
-        output_val.append( matrix_target[item] )
+   for i in range(n_example_training,n_example_val):
+      item = shuffled_list[i]
+      input_val.append( matrix_input[item] )
+      output_val.append( matrix_target[item] )
 
-    for i in range(n_example_val,n_rows):
-        item = shuffled_list[i]
-        input_test.append( matrix_input[item] )
-        output_test.append( matrix_target[item] )
+   for i in range(n_example_val,n_rows):
+      item = shuffled_list[i]
+      input_test.append( matrix_input[item] )
+      output_test.append( matrix_target[item] )
 
-    np.save(str(input_train)+'.npy', input_train)
-    np.save(str(input_val)+'.npy', input_val)
-    np.save(str(input_test)+'.npy', input_test)
-    np.save(str(output_train)+'.npy', output_train)
-    np.save(str(output_val)+'.npy', output_val)
-    np.save(str(output_test)+'.npy', output_test)
+   np.save('input_train.npy', input_train)
+   np.save('input_val.npy', input_val)
    
+   np.save('input_test.npy', input_test)
+   np.save('output_train.npy', output_train)
+   
+   np.save('output_val.npy', output_val)
+   np.save('output_test.npy', output_test)
+   
+   return 0
+
 if __name__ == "__main__":
    main()

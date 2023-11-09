@@ -61,11 +61,11 @@ class DecoderRNN(nn.Module):
         output = self.out(output)
         return output, hidden
 
-def _numpy2torch(numpy_path):
+def numpy2torch(numpy_path):
     """
     It converts the numpy matrix into a torch tensor to process the data 
     """    
-    matrix = np.load_matrix(numpy_path)
+    matrix = np.load(numpy_path)
 
     return torch.tensor(matrix)
 
@@ -85,9 +85,9 @@ def train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train:torch
         encoder_optimizer.zero_grad()
         decoder_optimizer.zero_grad()
         
-        input_tensor = input_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].shape(1,-1)
+        input_tensor = input_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].view(1,-1)
         #in base alla funzione, al fatto che l'encoder prende in input un vettore e non una matrice ( tensor Dataset)
-        output_tensor = output_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].shape(1,-1)
+        output_tensor = output_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].view(1,-1)
         
         encoder_outputs, encoder_hidden = encoder(input_tensor)
         decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)
@@ -106,9 +106,9 @@ def train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train:torch
     encoder_optimizer.zero_grad()
     decoder_optimizer.zero_grad()
 
-    input_tensor = input_train[(i+1)*n_elem_batch:, : ].shape(1,-1)
+    input_tensor = input_train[(i+1)*n_elem_batch:, : ].view(1,-1)
     #in base alla funzione, al fatto che l'encoder prende in input un vettore e non una matrice ( tensor Dataset)
-    output_tensor = output_train[(i+1)*n_elem_batch:, : ].shape(1,-1)
+    output_tensor = output_train[(i+1)*n_elem_batch:, : ].view(1,-1)
 
 
     encoder_outputs, encoder_hidden = encoder(input_tensor)
@@ -131,21 +131,22 @@ def train(encoder, decoder, n_elem_batch, learning_rate, input_train:torch.tenso
           input_val:torch.tensor, output_val:torch.tensor):
 
     loss_function = nn.NLLLoss()
-    total_losses_plot = []
+    total_train_loss_plot = []
+    total_val_loss_plot = []
     # Da aggiungere i plot se ci interessano =)
 
-    for steps in tqdm( list (range(n_epochs)) ):
+    for steps in tqdm( list (range(n_epochs)), desc="number of epochs"):
 
         error = train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train, output_train, loss_function)
-        total_losses_plot.append(error)
+        total_train_loss_plot.append(error)
 
         error_val = validation(encoder, decoder,input_val, output_val, loss_function)
+        total_val_loss_plot.append(error_val)
 
+def validation(encoder, decoder,input_val, output_val, loss_function):
 
-def validation (encoder, decoder,input_val, output_val, loss_function):
-
-    input_tensor = input_val.shape(1,-1)
-    output_tensor = output_val.shape(1,-1)
+    input_tensor = input_val.view(1,-1)
+    output_tensor = output_val.view(1,-1)
     validation_loss = 0 
 
     with torch.no_grad():
@@ -153,14 +154,36 @@ def validation (encoder, decoder,input_val, output_val, loss_function):
         encoder_outputs, encoder_hidden = encoder(input_tensor)
         decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)   
         
-        loss = loss_function(
+        validation_loss = loss_function(
         decoder_outputs.view(-1, decoder_outputs.size(-1)),
         output_tensor.view(-1))
 
-        return loss / decoder_outputs.shape[0]
+        return validation_loss / decoder_outputs.shape[0]
      
+def test(encoder, decoder, input_test, output_test):
+    loss_function = nn.NLLLoss()
+    input_tensor = input_test.view(1, -1)
+    output_tensor = output_test.view(1, -1)
+    test_loss = 0
 
-# DA FARE VALIDATION, TESTING FUNCTION E TRAINING FUNCTION CHE CONSIDERA LE EPOCHE 
+    with torch.no_grad():
+
+        encoder_outputs, encoder_hidden = encoder(input_tensor)
+        decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)   
+        
+        test_loss = loss_function(
+        decoder_outputs.view(-1, decoder_outputs.size(-1)),
+        output_tensor.view(-1))
+
+        return test_loss / decoder_outputs.shape[0]
+
+def evaluation(encoder, decoder, n_elem_batch, learning_rate,n_epochs, input_train, output_train, input_val, output_val, input_test, output_test):
+
+    train(encoder, decoder, n_elem_batch, learning_rate, input_train, output_train, n_epochs, 
+          input_val, output_val)
+    test(encoder, decoder, input_test, output_test)
+
+
 
 
 
