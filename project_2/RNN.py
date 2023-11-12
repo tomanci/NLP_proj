@@ -4,19 +4,25 @@ from torch import optim
 import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
+from torch.utils.data import TensorDataset, DataLoader, RandomSampler
+import matplotlib.pyplot as plt
+
 
 SOS = 1
+EOS = 0
 class EncoderRNN(nn.Module):
-    
-    def __init__(self, input_size, hidden_size, dropout_p=0.1, emb = True):
+
+    def __init__(self, input_size, device, hidden_size, dropout_p=0.1, emb = True):
 
         super(EncoderRNN, self).__init__()
         self.hidden_size = hidden_size
+        self.device = device
 
-        self.embedding = nn.Embedding(input_size, hidden_size)
-        self.gru = nn.GRU(hidden_size, hidden_size, batch_first=True)
-        self.dropout = nn.Dropout(dropout_p)
-            
+        self.embedding = nn.Embedding(input_size, hidden_size).to(self.device)
+        self.gru = nn.GRU(hidden_size, hidden_size, batch_first=True).to(self.device)
+        self.dropout = nn.Dropout(dropout_p).to(self.device)
+
+
 
     def forward(self, input):
         embedded = self.dropout(self.embedding(input))
@@ -25,20 +31,28 @@ class EncoderRNN(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-    def __init__(self, hidden_size, output_size):
+    def __init__(self, hidden_size, output_size, device):
         super(DecoderRNN, self).__init__()
+        self.device = device
+
         self.embedding = nn.Embedding(output_size, hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size, batch_first=True)
         self.out = nn.Linear(hidden_size, output_size)
 
-    def forward(self, encoder_outputs, encoder_hidden, MAX_LENGTH, target_tensor=None):
-        # analizza ogni riga della matrice, per tutta la sua lunghezza 
+
+    def forward(self, encoder_outputs, encoder_hidden, target_tensor=None):
+        # analizza ogni riga della matrice, per tutta la sua lunghezza
         batch_size = encoder_outputs.size(0)
-        decoder_input = torch.empty(batch_size, 1, dtype=torch.long, device=device).fill_(SOS)
+        decoder_input = torch.empty(batch_size, 1, dtype=torch.long, device=self.device).fill_(SOS)
         decoder_hidden = encoder_hidden
         decoder_outputs = []
 
-        for i in range(MAX_LENGTH):
+        if target_tensor is not None:
+          dim = target_tensor.shape[1]
+        else:
+          dim = max_length + 1
+
+        for i in range(dim):
             decoder_output, decoder_hidden  = self.forward_step(decoder_input, decoder_hidden)
             decoder_outputs.append(decoder_output)
 
@@ -63,128 +77,114 @@ class DecoderRNN(nn.Module):
 
 def numpy2torch(numpy_path):
     """
-    It converts the numpy matrix into a torch tensor to process the data 
-    """    
+    It converts the numpy matrix into a torch tensor to process the data
+    """
     matrix = np.load(numpy_path)
 
-    return torch.tensor(matrix)
+    return matrix
 
-def train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train:torch.tensor, output_train:torch.tensor, loss_function):
+def torch_format(batch_size, input_train, output_train, device):
+
+  train_data = TensorDataset(torch.LongTensor(input_train).to(device), torch.LongTensor(output_train).to(device))
+  #train_sampler = RandomSampler(train_data)
+  #train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
+  train_dataloader = DataLoader(train_data, batch_size=batch_size)
+
+  return train_dataloader
+
+
+def train_epoch(encoder, decoder, n_elem_batch, learning_rate, train_dataloader, loss_function, device):
     """
     training funtion on a single epoch of the input matrix dataset
     """
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
 
-    n_batch = input_train.shape[0] // n_elem_batch #quotient
-    elem_last_batch = input_train.shape[0] % n_elem_batch #resto
-    total_loss_batch = 0 
+    total_loss_batch = 0
 
-    for i in range(n_batch):
-        
-        encoder_optimizer.zero_grad()
-        decoder_optimizer.zero_grad()
-        
-        input_tensor = input_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].view(1,-1).to(torch.int64)
-        #in base alla funzione, al fatto che l'encoder prende in input un vettore e non una matrice ( tensor Dataset)
-        output_tensor = output_train[i*n_elem_batch: (i+1)*n_elem_batch, : ].view(1,-1).to(torch.int64)
-        
-        encoder_outputs, encoder_hidden = encoder(input_tensor)
-        decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)
+    for data in train_dataloader:
 
-        loss = loss_function(
-            decoder_outputs.view(-1, decoder_outputs.size(-1)),
-            output_tensor.view(-1))
-        
-        loss.backward()
-        total_loss_batch += loss.item()
+      encoder_optimizer.zero_grad()
+      decoder_optimizer.zero_grad()
 
-        encoder_optimizer.step()
-        decoder_optimizer.step()
+      input_tensor, output_tensor = data
 
-    #last elements of the training set
-    encoder_optimizer.zero_grad()
-    decoder_optimizer.zero_grad()
+      encoder_outputs, encoder_hidden = encoder(input_tensor)
+      decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)
 
-    input_tensor = input_train[(i+1)*n_elem_batch:, : ].view(1,-1)
-    #in base alla funzione, al fatto che l'encoder prende in input un vettore e non una matrice ( tensor Dataset)
-    output_tensor = output_train[(i+1)*n_elem_batch:, : ].view(1,-1)
+      loss = loss_function(
+            decoder_outputs.view(-1, decoder_outputs.size(-1)).to(device),
+            output_tensor.view(-1).to(device) )
+
+      loss.backward()
+      total_loss_batch += loss.item()
+
+      encoder_optimizer.step()
+      decoder_optimizer.step()
+
+    return total_loss_batch/input_tensor.shape[0]
 
 
-    encoder_outputs, encoder_hidden = encoder(input_tensor)
-    decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)
-
-    loss = loss_function(
-        decoder_outputs.view(-1, decoder_outputs.size(-1)),
-        output_tensor.view(-1))
-        
-    loss.backward()
-    total_loss_batch += loss.item()
-
-    encoder_optimizer.step()
-    decoder_optimizer.step()
-
-    return total_loss_batch/input_train.shape[0]
-
-
-def train(encoder, decoder, n_elem_batch, learning_rate, input_train:torch.tensor, output_train:torch.tensor, n_epochs, 
-          input_val:torch.tensor, output_val:torch.tensor):
+def train(encoder, decoder, n_elem_batch, learning_rate, train_dataloader, n_epochs, device):
 
     loss_function = nn.NLLLoss()
     total_train_loss_plot = []
-    total_val_loss_plot = []
-    # Da aggiungere i plot se ci interessano =)
+
 
     for steps in tqdm( list (range(n_epochs)), desc="number of epochs"):
 
-        error = train_epoch(encoder, decoder, n_elem_batch, learning_rate, input_train, output_train, loss_function)
+        error = train_epoch(encoder, decoder, n_elem_batch, learning_rate, train_dataloader, loss_function, device)
         total_train_loss_plot.append(error)
 
-        error_val = validation(encoder, decoder,input_val, output_val, loss_function)
-        total_val_loss_plot.append(error_val)
+    plt.plot(total_train_loss_plot)
 
-def validation(encoder, decoder,input_val, output_val, loss_function):
+def test(encoder, decoder, test_dataloader, device):
+    encoder.eval()
+    decoder.eval()
 
-    input_tensor = input_val.view(1,-1)
-    output_tensor = output_val.view(1,-1)
-    validation_loss = 0 
-
-    with torch.no_grad():
-        
-        encoder_outputs, encoder_hidden = encoder(input_tensor)
-        decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)   
-        
-        validation_loss = loss_function(
-        decoder_outputs.view(-1, decoder_outputs.size(-1)),
-        output_tensor.view(-1))
-
-        return validation_loss / decoder_outputs.shape[0]
-     
-def test(encoder, decoder, input_test, output_test):
     loss_function = nn.NLLLoss()
-    input_tensor = input_test.view(1, -1)
-    output_tensor = output_test.view(1, -1)
     test_loss = 0
 
     with torch.no_grad():
+      for data in test_dataloader:
+          input_tensor, output_tensor = data
+          encoder_outputs, encoder_hidden = encoder(input_tensor)
+          decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)
 
+          test_loss += loss_function(
+          decoder_outputs.view(-1, decoder_outputs.size(-1)).to(device),
+          output_tensor.view(-1).to(device))
+
+          
+      return test_loss / decoder_outputs.shape[0]
+
+def translation(encoder, decoder, input_lang, output_lang,device):
+
+    input_sentence = input("Type the sentence you want to translate:")
+    vector = input_lang.string_translation(input_sentence)
+    input_tensor = torch.tensor(vector,dtype=torch.long).to(device).unsqueeze(1)
+
+    with torch.no_grad():
         encoder_outputs, encoder_hidden = encoder(input_tensor)
-        decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, output_tensor)   
-        
-        test_loss = loss_function(
-        decoder_outputs.view(-1, decoder_outputs.size(-1)),
-        output_tensor.view(-1))
+        decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden)
 
-        return test_loss / decoder_outputs.shape[0]
+        _, topi = decoder_outputs.topk(1)
+        decoded_ids = topi.squeeze()
 
-def evaluation(encoder, decoder, n_elem_batch, learning_rate,n_epochs, input_train, output_train, input_val, output_val, input_test, output_test):
+        for i in range(3):
+          decoded_words = []
+          print(f"{i} solution proposed out of 3")
+          for idx in decoded_ids[i]:
+            if idx.item() == EOS:
+                decoded_words.append('<EOS>')
+                break
+            decoded_words.append(output_lang.index2word[idx.item()])
 
-    train(encoder, decoder, n_elem_batch, learning_rate, input_train, output_train, n_epochs, 
-          input_val, output_val)
-    test(encoder, decoder, input_test, output_test)
+          print(f"Original sentence = {input_sentence} --> Translated sentence = {decoded_words}")
 
 
+def evaluation(encoder, decoder, n_elem_batch, learning_rate, n_epochs, train_dataloader, device, test_dataloader):
 
-
-
+    train(encoder, decoder, n_elem_batch, learning_rate, train_dataloader, n_epochs,device)
+    test(encoder, decoder, test_dataloader, device)
 
